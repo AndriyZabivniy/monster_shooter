@@ -3,7 +3,6 @@ from random import randint
 import math
 from time import time as timer
 
-
 img_background = 'battleback1_0.png'
 img_bat = 'frame_0_delay-0.1s-removebg-preview.png'
 img_bullet = 'bullet-removebg-preview.png'
@@ -30,8 +29,8 @@ finish = False
 
 mixer.init()
 fire_sound = mixer.Sound('cg1.wav')
-
-
+background_music = mixer.Sound('Rising.mp3')
+background_music.play(-1)
 font.init()
 font2 = font.Font(None, 36)
 font1 = font.SysFont(None, 80)
@@ -49,6 +48,7 @@ max_lost = 10
 rel_speed = 5
 bullets_count = 10
 
+
 class GameSprite(sprite.Sprite):
     def __init__(self, player_image, player_x, player_y, size_x, size_y, player_speed):
         super().__init__()
@@ -60,7 +60,6 @@ class GameSprite(sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = player_x
         self.rect.y = player_y
-
 
     def reset(self):
         window.blit(self.image, (self.rect.x, self.rect.y))
@@ -126,10 +125,11 @@ class Bullet(GameSprite):
 class Enemy(GameSprite):
     def __init__(self, player_image, player_x, player_y, size_x, size_y, player_speed):
         super().__init__(player_image, player_x, player_y, size_x, size_y, player_speed)
-        self.imgs = [img_bat0, img_bat1, img_bat2, img_bat4, img_bat5, img_bat6, img_bat7, ]
+        self.imgs = [img_bat0, img_bat1, img_bat2, img_bat4, img_bat5, img_bat6, img_bat7]
+        for i in range(len(self.imgs)):
+            self.imgs[i] = transform.scale(self.imgs[i], (self.rect.width, self.rect.height))
         self.img_number = 0
-        self.anim_speed = 0.1
-
+        self.anim_speed = 0.7
 
     def animate(self):
         self.img_number += self.anim_speed
@@ -137,9 +137,9 @@ class Enemy(GameSprite):
             self.img_number = 0
         self.image = self.imgs[int(self.img_number)]
 
-
     # рух ворога
     def update(self):
+        self.animate()
         self.rect.y += self.speed
         global lost, life
 
@@ -147,43 +147,41 @@ class Enemy(GameSprite):
         if self.rect.y > win_height:
             self.rect.x = randint(80, win_width - 80)
             self.rect.y = 0
-            # lost = lost + 1
             life -= 1
-zombis = sprite.Group()
+
+
+bats = sprite.Group()
+
 
 class WaveManager:
     def __init__(self):
         self.wave_number = 1
-        self.zombies_per_wave = 5
-        self.zombies_remaining = self.zombies_per_wave
+        self.bates_per_wave = 5
+        self.bates_remaining = self.bates_per_wave
 
     def next_wave(self):
         tur1.lvl_up()
         self.wave_number += 1
-        self.zombies_per_wave = 5 + self.wave_number * 2  # щораз більше зомбі
-        self.zombies_remaining = self.zombies_per_wave
+        self.bates_per_wave = 5 + self.wave_number * 2  # щораз більше зомбі
+        self.bates_remaining = self.bates_per_wave
         self.spawn_wave()
 
     def spawn_wave(self):
-        for _ in range(self.zombies_per_wave):
-            zombi = Enemy(img_bat, randint(80, win_width - 80), -40, 80, 50, randint(1, 5))
-            zombis.add(zombi)
+        for _ in range(self.bates_per_wave):
+            bat = Enemy(img_bat, randint(80, win_width - 80), -40, 100, 100, randint(1, 5))
+            bats.add(bat)
 
-    def zombie_killed(self):
-        self.zombies_remaining -= 1
-        if self.zombies_remaining <= 0:
+    def bate_killed(self):
+        self.bates_remaining -= 1
+        if self.bates_remaining <= 0:
             return True  # Хвиля завершена
         return False
 
 
 wave_manager = WaveManager()
 wave_manager.spawn_wave()
-tur = GameSprite(img_tur, (win_width - 120)//2, win_height - 157, 120, 120, 0)
-tur1 = Player(img_tur1, (win_width - 100)//2, win_height - 148, 100, 100, 0)
-
-
-
-
+tur = GameSprite(img_tur, (win_width - 120) // 2, win_height - 157, 120, 120, 0)
+tur1 = Player(img_tur1, (win_width - 100) // 2, win_height - 148, 100, 100, 0)
 
 bullets = sprite.Group()
 
@@ -192,7 +190,6 @@ while game:
         if e.type == QUIT:
             game = False
         if e.type == MOUSEBUTTONDOWN and e.button == 1:
-
 
             if num_fire < bullets_count and rel_time == False:  # ⬅️
                 num_fire = num_fire + 1  # ⬅️
@@ -219,8 +216,8 @@ while game:
         tur1.update()
         tur1.reset()
 
-        zombis.update()
-        zombis.draw(window)
+        bats.update()
+        bats.draw(window)
 
         if rel_time == True:
             now_time = timer()  # зчитуємо час
@@ -232,11 +229,10 @@ while game:
                 num_fire = 0  # обнулюємо лічильник куль
                 rel_time = False  # скидаємо прапор перезарядки
 
-
-        collides = sprite.groupcollide(zombis, bullets, True, True)
+        collides = sprite.groupcollide(bats, bullets, True, True)
         for c in collides:
             score += 1
-            if wave_manager.zombie_killed():
+            if wave_manager.bate_killed():
                 wave_manager.next_wave()
 
         if life == 0 or lost >= max_lost:  # ⬅️⬅️
@@ -244,17 +240,17 @@ while game:
             window.blit(lose, (200, 200))
 
         # якщо спрайт торкнувся ворога зменшує життя⬅️⬅️⬅️⬅️
-        if sprite.spritecollide(tur1, zombis, False):
-            sprite.spritecollide(tur1, zombis, True)
+        if sprite.spritecollide(tur1, bats, False):
+            sprite.spritecollide(tur1, bats, True)
             life = life - 1
-            if wave_manager.zombie_killed():
+            if wave_manager.bate_killed():
                 wave_manager.next_wave()
 
         hearts = emoji_font.render('❤️' * life, True, (255, 100, 100))
         window.blit(hearts, (win_width - 200, win_height - 50))
 
-        lvls = font2.render('Лвл: ' + str(tur1.lvl), 1, (0, 0, 0))
-        window.blit(lvls, (80, win_height - 70))
+
+
 
         mon_count = font2.render('Вбито кажанів:' + str(score), 1, (11, 151, 153))
         window.blit(mon_count, (490, 10))
@@ -263,7 +259,6 @@ while game:
         if score >= goal:
             finish = True
             window.blit(win, (200, 200))
-
 
     display.update()
     time.delay(60)
